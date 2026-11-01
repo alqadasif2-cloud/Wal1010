@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { User, Wallet, Transaction, AppNotification } from './types/wallet';
+import { User, Wallet, Transaction, AppNotification, LiveMarketData } from './types/wallet';
 import { WalletDatabase } from './services/walletDb';
 import { WalletCloudService } from './services/walletCloudService';
 import { marketPriceService } from './services/marketPriceService';
@@ -119,7 +119,7 @@ export default function App() {
     if (!currentUser?.userId) return;
 
     // 1. Instant Cloud Wallet Listener (reflects incoming transfers from other phones immediately)
-    const unsubWallet = WalletCloudService.subscribeUserWallet(currentUser.userId, (cloudWallet) => {
+    const unsubWallet = WalletCloudService.subscribeUserWallet(currentUser.userId, (cloudWallet: Wallet) => {
       setWallet(cloudWallet);
       WalletDatabase.updateLocalWallet(cloudWallet);
     });
@@ -128,7 +128,7 @@ export default function App() {
     WalletDatabase.reconcileUserIncomingTransactions(currentUser.userId);
 
     // 3. Transactions Listener
-    const unsubTxs = WalletCloudService.subscribeUserTransactions(currentUser.userId, (cloudTxs) => {
+    const unsubTxs = WalletCloudService.subscribeUserTransactions(currentUser.userId, (cloudTxs: Transaction[]) => {
       WalletDatabase.reconcileUserIncomingTransactions(currentUser.userId);
       setTransactions(cloudTxs);
       
@@ -137,7 +137,7 @@ export default function App() {
     });
 
     // 4. Notifications Listener
-    const unsubNotifs = WalletCloudService.subscribeUserNotifications(currentUser.userId, (cloudNotifs) => {
+    const unsubNotifs = WalletCloudService.subscribeUserNotifications(currentUser.userId, (cloudNotifs: AppNotification[]) => {
       setNotifications(cloudNotifs);
     });
 
@@ -150,7 +150,7 @@ export default function App() {
 
   // Subscribe to Live Market Prices Feed
   useEffect(() => {
-    const unsubscribe = marketPriceService.subscribe((prices, isConnected) => {
+    const unsubscribe = marketPriceService.subscribe((prices: Record<string, LiveMarketData>, isConnected: boolean) => {
       setIsFeedLive(isConnected);
 
       const btcPrice = prices['BTC'];
