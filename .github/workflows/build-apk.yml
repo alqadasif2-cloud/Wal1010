@@ -1,0 +1,84 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    name: Build & Package Android APK
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Ensure Core Modules
+        run: |
+          if [ ! -f "src/services/walletDb.ts" ] || [ ! -f "src/types/wallet.ts" ] || [ ! -f "src/utils/formatters.ts" ]; then
+            echo "Missing core modules detected. Restoring from base repository..."
+            git clone --depth 1 https://github.com/alqadasif2-cloud/Wal99.git /tmp/walbase
+            mkdir -p src/services src/types src/utils
+            cp -r /tmp/walbase/src/services/* src/services/ 2>/dev/null || true
+            cp -r /tmp/walbase/src/types/* src/types/ 2>/dev/null || true
+            cp -r /tmp/walbase/src/utils/* src/utils/ 2>/dev/null || true
+            echo "Core modules restored successfully."
+          fi
+
+      - name: Install Node Dependencies
+        run: |
+          npm install --legacy-peer-deps
+
+      - name: Build Web Assets
+        run: |
+          npx vite build --base=./
+        env:
+          NODE_ENV: production
+
+      - name: Sync Capacitor Android
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+          npx cap sync android
+
+      - name: Build Android Debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Rename APK for Easy Identification
+        run: |
+          mkdir -p output-apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk output-apk/TrustWallet-Pro.apk || cp android/app/build/outputs/apk/debug/*.apk output-apk/TrustWallet-Pro.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TrustWallet-Pro-APK
+          path: output-apk/TrustWallet-Pro.apk
+          retention-days: 30
+
+      - name: Build Summary
+        run: |
+          echo "### 🚀 تم بناء تطبيق الأندرويد بنجاح!" >> $GITHUB_STEP_SUMMARY
+          echo "يمكنك تنزيل ملف الـ APK مباشرة من قسم **Artifacts** في أسفل صفحة الـ Action الحالية باسم **TrustWallet-Pro-APK**." >> $GITHUB_STEP_SUMMARY
