@@ -53,12 +53,14 @@ jobs:
         env:
           NODE_ENV: production
 
-      - name: Sync Capacitor Android
+      - name: Setup Capacitor and Generate Android Project
         run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
-          npx cap sync android
+          npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
+          npx -y @capacitor/cli init "TRUST WALLET PRO" "com.trustwallet.pro" --web-dir dist || true
+          rm -rf android
+          npx -y @capacitor/cli add android
+          npx -y @capacitor/cli sync android
+          ls -la android/gradlew
 
       - name: Build Android Debug APK
         run: |
@@ -66,7 +68,7 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Rename APK for Easy Identification
+      - name: Package APK for Download
         run: |
           mkdir -p output-apk
           cp android/app/build/outputs/apk/debug/app-debug.apk output-apk/TrustWallet-Pro.apk || cp android/app/build/outputs/apk/debug/*.apk output-apk/TrustWallet-Pro.apk
@@ -80,5 +82,5 @@ jobs:
 
       - name: Build Summary
         run: |
-          echo "### 🚀 تم بناء تطبيق الأندرويد بنجاح!" >> $GITHUB_STEP_SUMMARY
-          echo "يمكنك تنزيل ملف الـ APK مباشرة من قسم **Artifacts** في أسفل صفحة الـ Action الحالية باسم **TrustWallet-Pro-APK**." >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 تم بناء وتوليد ملف APK بنجاح!" >> $GITHUB_STEP_SUMMARY
+          echo "يمكنك تنزيل ملف التطبيق الآن من قسم **Artifacts** في أسفل هذه الصفحة باسم **TrustWallet-Pro-APK**." >> $GITHUB_STEP_SUMMARY
