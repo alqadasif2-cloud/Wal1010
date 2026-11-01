@@ -31,6 +31,18 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Ensure Core Modules
+        run: |
+          if [ ! -f "src/services/walletDb.ts" ] || [ ! -f "src/types/wallet.ts" ] || [ ! -f "src/utils/formatters.ts" ]; then
+            echo "Missing core modules detected. Restoring from base repository..."
+            git clone --depth 1 https://github.com/alqadasif2-cloud/Wal99.git /tmp/walbase
+            mkdir -p src/services src/types src/utils
+            cp -r /tmp/walbase/src/services/* src/services/ 2>/dev/null || true
+            cp -r /tmp/walbase/src/types/* src/types/ 2>/dev/null || true
+            cp -r /tmp/walbase/src/utils/* src/utils/ 2>/dev/null || true
+            echo "Core modules restored successfully."
+          fi
+
       - name: Install Dependencies
         run: |
           npm install --legacy-peer-deps
